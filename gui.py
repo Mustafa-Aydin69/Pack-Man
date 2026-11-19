@@ -6,9 +6,13 @@ sonuçlarını çizer.
 
 import sys
 import tkinter as tk
-from tkinter import ttk
 
 import theme
+from agent import UtilityAgent
+from game_screen import GameScreen
+from match import AI, Match
+from results import IntermissionScreen, ResultsScreen
+from welcome import WelcomeScreen
 
 APP_TITLE = "Pacman — Fayda Tabanlı Ajan"
 MIN_WINDOW_WIDTH = 960
@@ -51,6 +55,8 @@ def configure_window_size(root, scale):
 class AppShell:
     """Tek ana pencerede ekranlar arası geçiş.
 
+    Akış: karşılama (kim önce?) → 1. tur → ara ekran → 2. tur → sonuç → karşılama.
+
     Her geçişte önceki ekran tamamen kapatılır; yeni bir Tk kök penceresi
     oluşturulmaz. Bu sayede ttkbootstrap'ın tek ``Style`` nesnesi korunur.
     """
@@ -60,36 +66,37 @@ class AppShell:
         self.scale = ui_scale(root)
         self.style = theme.setup(root, self.scale)
         self.screen = None
+        self.match = None
         root.title(APP_TITLE)
         configure_window_size(root, self.scale)
         root.protocol("WM_DELETE_WINDOW", self.close)
-        self.show_placeholder()
+        self.show_welcome()
 
-    def show_placeholder(self):
-        """Geçici başlangıç ekranı: karşılama ve maç akışı eklenene kadar tek tur oynatır."""
+    def show_welcome(self):
         self._clear()
-        page = ttk.Frame(self.root, style="Page.TFrame", padding=theme.px(theme.SPACING["page"], self.scale))
-        page.pack(fill="both", expand=True)
-        ttk.Label(page, text="Pacman", style="Title.TLabel").pack(anchor="w")
-        ttk.Label(page, text="Fayda tabanlı rasyonel ajan", style="Subtitle.TLabel").pack(anchor="w")
-        buttons = ttk.Frame(page, style="Page.TFrame")
-        buttons.pack(anchor="w", pady=(theme.px(16, self.scale), 0))
-        ttk.Button(buttons, text="İnsan olarak oyna", command=lambda: self.show_game(ai=False),
-                   **theme.button_options("primary")).pack(side="left")
-        ttk.Button(buttons, text="Yapay zekâyı izle", command=lambda: self.show_game(ai=True),
-                   **theme.button_options("outline")).pack(side="left", padx=(theme.px(8, self.scale), 0))
-        self.screen = page
+        self.match = None
+        self.screen = WelcomeScreen(self.root, self.scale, on_start=self.start_match)
 
-    def show_game(self, ai):
-        from agent import UtilityAgent
-        from game_screen import GameScreen
-        from match import AI, HUMAN, Run
+    def start_match(self, first_player):
+        self.match = Match(first_player)
+        self.show_turn()
 
+    def show_turn(self):
+        """Sıradaki oyuncunun turunu sıfırdan başlatır."""
         self._clear()
-        run = Run(AI if ai else HUMAN)
-        self.screen = GameScreen(self.root, self.scale, run, agent=UtilityAgent() if ai else None,
-                                 on_finish=lambda _result: self.show_placeholder(),
-                                 on_home=self.show_placeholder)
+        run = self.match.new_run()
+        agent = UtilityAgent() if run.player == AI else None
+        self.screen = GameScreen(self.root, self.scale, run, agent=agent,
+                                 on_finish=self._turn_finished, on_home=self.show_welcome)
+
+    def _turn_finished(self, result):
+        self.match.record(result)
+        self._clear()
+        if self.match.is_over:
+            self.screen = ResultsScreen(self.root, self.scale, self.match, on_new_match=self.show_welcome)
+        else:
+            self.screen = IntermissionScreen(self.root, self.scale, result, self.match.current_player,
+                                             on_continue=self.show_turn)
 
     def _clear(self):
         if self.screen is not None:
