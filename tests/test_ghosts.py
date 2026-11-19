@@ -54,5 +54,37 @@ class ChaseTests(unittest.TestCase):
         self.assertTrue(state.is_over)
 
 
+class WanderTests(unittest.TestCase):
+    def walk(self, seed, steps=40):
+        state = GameState(parse_level("loop", LOOP), seed=seed, ghost_policy=ghosts.wander)
+        state.pacman = (1, 3)                     # yakalanmasın diye hayaletlerden uzakta
+        path = []
+        for _ in range(steps):
+            state.step()
+            if state.is_over:
+                break
+            path.append(tuple(ghost.position for ghost in state.ghosts))
+        return path
+
+    def test_same_seed_same_path(self):
+        self.assertEqual(self.walk(7), self.walk(7))
+
+    def test_never_reverses_on_loop(self):
+        # Döngüde çıkmaz yok; hayalet hiç geri dönmemeli.
+        state = GameState(parse_level("loop", LOOP), seed=3)
+        ghost = state.ghosts[1]
+        previous = None
+        for _ in range(30):
+            direction = ghosts.wander(state, ghost)
+            self.assertIsNot(direction, previous.opposite if previous else None)
+            ghost.position, ghost.direction, previous = direction.apply(ghost.position), direction, direction
+
+    def test_uses_game_rng(self):
+        state = GameState(parse_level("loop", LOOP), seed=11)
+        ghost = state.ghosts[0]
+        copy = state.clone()
+        self.assertEqual(ghosts.wander(state, ghost), ghosts.wander(copy, copy.ghosts[0]))
+
+
 if __name__ == "__main__":
     unittest.main()

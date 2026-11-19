@@ -31,3 +31,16 @@ def chase(state, ghost):
     distances = state.level.distances_from(state.pacman)
     best = min(_options(state, ghost), key=lambda option: distances.get(option[1], float("inf")))
     return best[0]
+
+
+def wander(state, ghost):
+    """Gezgin: geri dönmeden, geçerli yönlerden birini rastgele seçer.
+
+    Rastgelelik oyunun kendi üretecinden (``state.rng``) gelir. Aynı seed ve
+    aynı oyuncu hamleleriyle hayalet her seferinde aynı yolu izler; bu da iki
+    oyuncunun aynı koşullarda oynamasını sağlar. Ajanın kopyaladığı durum da
+    üretecin kopyasını taşıdığı için ajan, hayaletin bir sonraki adımını
+    gerçek oyundakiyle aynı biçimde simüle eder.
+    """
+    direction, _ = state.rng.choice(_options(state, ghost))
+    return direction
