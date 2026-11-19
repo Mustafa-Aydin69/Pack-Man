@@ -70,10 +70,15 @@ def _check_tkinter_available():
     return f"Tkinter/Tcl {version} kullanılabilir"
 
 
-def _check_theme():
-    """Arayüz teması yüklenebiliyor mu? (Pencere açmaz; kullanılan temayı bildirir.)"""
-    import theme
-    return f"Arayüz teması: {theme.theme_description()}"
+def _check_fonts():
+    """Programla gelen yazı tipi pakette mi? (Pencere açmaz.)"""
+    import os
+
+    import fonts
+    for name in fonts.BUNDLED_FONTS:
+        path = fonts.resource_path(fonts.FONT_DIR, name)
+        assert os.path.getsize(path) > 10_000, f"{name} eksik ya da bozuk"
+    return f"yazı tipleri pakette ({', '.join(fonts.BUNDLED_FONTS)})"
 
 
 CHECKS = [
@@ -82,7 +87,7 @@ CHECKS = [
     _check_seed_repeats,
     _check_agent,
     _check_tkinter_available,
-    _check_theme,
+    _check_fonts,
 ]
 
 
