@@ -66,14 +66,30 @@ class AppShell:
         self.show_placeholder()
 
     def show_placeholder(self):
-        """Ekranlar eklenene kadar gösterilen geçici sayfa."""
+        """Geçici başlangıç ekranı: karşılama ve maç akışı eklenene kadar tek tur oynatır."""
         self._clear()
         page = ttk.Frame(self.root, style="Page.TFrame", padding=theme.px(theme.SPACING["page"], self.scale))
         page.pack(fill="both", expand=True)
         ttk.Label(page, text="Pacman", style="Title.TLabel").pack(anchor="w")
-        ttk.Label(page, text="Fayda tabanlı rasyonel ajan — yapım aşamasında",
-                  style="Subtitle.TLabel").pack(anchor="w")
+        ttk.Label(page, text="Fayda tabanlı rasyonel ajan", style="Subtitle.TLabel").pack(anchor="w")
+        buttons = ttk.Frame(page, style="Page.TFrame")
+        buttons.pack(anchor="w", pady=(theme.px(16, self.scale), 0))
+        ttk.Button(buttons, text="İnsan olarak oyna", command=lambda: self.show_game(ai=False),
+                   **theme.button_options("primary")).pack(side="left")
+        ttk.Button(buttons, text="Yapay zekâyı izle", command=lambda: self.show_game(ai=True),
+                   **theme.button_options("outline")).pack(side="left", padx=(theme.px(8, self.scale), 0))
         self.screen = page
+
+    def show_game(self, ai):
+        from agent import UtilityAgent
+        from game_screen import GameScreen
+        from match import AI, HUMAN, Run
+
+        self._clear()
+        run = Run(AI if ai else HUMAN)
+        self.screen = GameScreen(self.root, self.scale, run, agent=UtilityAgent() if ai else None,
+                                 on_finish=lambda _result: self.show_placeholder(),
+                                 on_home=self.show_placeholder)
 
     def _clear(self):
         if self.screen is not None:
