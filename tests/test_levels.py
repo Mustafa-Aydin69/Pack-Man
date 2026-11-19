@@ -1,6 +1,6 @@
 import unittest
 
-from levels import Direction, LevelError, bfs_distances, parse_level
+from levels import LEVELS, Direction, LevelError, bfs_distances, parse_level
 
 SMALL = """
 #######
@@ -66,6 +66,19 @@ class BfsTests(unittest.TestCase):
         level = parse_level("small", SMALL)
         moves = dict(level.moves_from((1, 1)))
         self.assertEqual(set(moves), {Direction.RIGHT, Direction.DOWN})
+
+
+class BuiltInLevelTests(unittest.TestCase):
+    def test_levels_get_harder(self):
+        first, second = LEVELS
+        self.assertGreater(len(second.ghost_starts), len(first.ghost_starts))
+        self.assertGreater(len(second.walls), len(first.walls))
+
+    def test_every_level_has_reachable_food_and_power(self):
+        for level in LEVELS:
+            reachable = bfs_distances(level, level.pacman_start)
+            self.assertTrue(level.pellets <= reachable.keys(), level.name)
+            self.assertTrue(level.powers, level.name)
 
 
 class DirectionTests(unittest.TestCase):

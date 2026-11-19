@@ -153,3 +153,48 @@ def parse_level(name, text):
     if unreachable:
         raise LevelError(f"{name}: Pacman'in ulaşamadığı kareler var: {unreachable}")
     return level
+
+
+# ----------------------------------------------------------------------
+# Hazır seviyeler
+# ----------------------------------------------------------------------
+# Seviye 1: 2 hayalet, geniş ve çoğunlukla döngülü koridorlar; yalnızca iki
+# kısa çıkmaz var. Hayaletler Pacman'den 15–16 adım uzakta başlar.
+LEVEL_1 = """
+###################
+#o.......#.......o#
+#.##.###.#.###.##.#
+#.......GG........#
+#.##.#.#####.#.##.#
+#....#...#...#....#
+####.###.#.###.####
+#....#.......#....#
+##.#.#.#####.#.#.##
+#..#.....P.....#..#
+#.##.###.#.###.##.#
+#o.......#.......o#
+###################
+"""
+
+# Seviye 2: 3 hayalet, daha büyük ve daha sık duvarlı harita. Dört çıkmaz
+# sokak (kaçış yolu olmayan koridor) var ve iki hayalet Pacman'e 9 adım
+# yakınlıkta başlar; bu yüzden Seviye 1'den zordur.
+LEVEL_2 = """
+#####################
+#o.....#.....#.....o#
+#.###.##.###.##.###.#
+#.#.......G.......#.#
+#.#.###.#####.###.#.#
+#...#.....#.....#...#
+###.#.###.#.###.#.###
+#.....#..G.G..#.....#
+#.###.#.#####.#.###.#
+#...#...........#...#
+###.#.##.###.##.#.###
+#.....#...P...#.....#
+#.###.#.#####.#.###.#
+#o........#........o#
+#####################
+"""
+
+LEVELS = (parse_level("Seviye 1", LEVEL_1), parse_level("Seviye 2", LEVEL_2))
