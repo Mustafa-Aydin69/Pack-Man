@@ -80,6 +80,11 @@ class BuiltInLevelTests(unittest.TestCase):
         self.assertGreater(len(second.ghost_starts), len(first.ghost_starts))
         self.assertGreater(len(second.walls), len(first.walls))
 
+    def test_first_level_has_no_dead_ends(self):
+        level = LEVELS[0]
+        open_squares = [(r, c) for r in range(level.height) for c in range(level.width) if level.is_open((r, c))]
+        self.assertTrue(all(len(level.moves_from(square)) >= 2 for square in open_squares))
+
     def test_every_level_has_reachable_food_and_power(self):
         for level in LEVELS:
             reachable = bfs_distances(level, level.pacman_start)
