@@ -54,6 +54,31 @@ class ChaseTests(unittest.TestCase):
         self.assertTrue(state.is_over)
 
 
+class FleeTests(unittest.TestCase):
+    def test_turns_around_to_escape(self):
+        state = loop_state()
+        ghost = state.ghosts[1]
+        ghost.position, ghost.direction = (2, 5), Direction.UP   # Pacman'e doğru gidiyordu
+        state.pacman = (1, 4)
+        self.assertEqual(ghosts.flee(state, ghost), Direction.DOWN)
+
+    def test_prefers_not_to_reverse_on_tie(self):
+        # Hayalet (1, 4) Pacman'in (3, 4) tam karşısında: sol da sağ da 7 adım uzaklaştırır.
+        text = """
+#########
+#...G...#
+#.#####.#
+#...P..G#
+#########
+"""
+        state = GameState(parse_level("tie", text))
+        ghost = state.ghosts[0]                   # (1, 4)
+        ghost.direction = Direction.LEFT
+        self.assertEqual(ghosts.flee(state, ghost), Direction.LEFT)
+        ghost.direction = Direction.RIGHT
+        self.assertEqual(ghosts.flee(state, ghost), Direction.RIGHT)
+
+
 class WanderTests(unittest.TestCase):
     def walk(self, seed, steps=40):
         state = GameState(parse_level("loop", LOOP), seed=seed, ghost_policy=ghosts.wander)

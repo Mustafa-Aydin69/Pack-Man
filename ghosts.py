@@ -44,3 +44,23 @@ def wander(state, ghost):
     """
     direction, _ = state.rng.choice(_options(state, ghost))
     return direction
+
+
+def flee(state, ghost):
+    """Korkmuş hayalet: Pacman'e BFS mesafesini en çok artıran yönü seçer.
+
+    Diğer stratejilerden farklı olarak **geri dönebilir**. Enerji topu
+    yendiği anda hayalet Pacman'e doğru ilerliyor olabilir; geri dönüş yasak
+    olsaydı kaçmak yerine bir kare daha Pacman'e yaklaşmak zorunda kalırdı.
+    Klasik Pacman'de de hayaletler korktuklarında yön değiştirir. Eşit
+    mesafede geri dönmeyen yön tercih edilir ki hayalet ileri-geri titremesin.
+    """
+    distances = state.level.distances_from(state.pacman)
+    reverse = ghost.direction.opposite if ghost.direction else None
+
+    def preference(option):
+        direction, target = option
+        return -distances.get(target, 0), direction is reverse
+
+    best = min(state.level.moves_from(ghost.position), key=preference)
+    return best[0]
