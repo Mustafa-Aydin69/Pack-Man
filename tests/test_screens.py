@@ -80,13 +80,13 @@ class ResultsScreenTests(_TkTestCase):
     def test_headline_names_winner(self):
         match = self.finished_match(result(AI, completed=False, score=5000), result(HUMAN, completed=True))
         screen = ResultsScreen(self.root, 1.0, match, on_new_match=lambda: None)
-        self.assertEqual(screen.headline.cget("text"), "Kazanan: İnsan")
+        self.assertEqual(screen.headline.cget("text"), "İnsan kazandı")
         screen.destroy()
 
     def test_draw(self):
         match = self.finished_match(result(HUMAN), result(AI))
         screen = ResultsScreen(self.root, 1.0, match, on_new_match=lambda: None)
-        self.assertEqual(screen.headline.cget("text"), "Berabere!")
+        self.assertEqual(screen.headline.cget("text"), "Berabere")
         screen.destroy()
 
     def test_enter_binding_is_removed_on_destroy(self):

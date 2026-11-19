@@ -1,18 +1,76 @@
-"""Karşılama ekranı: oyunun tanıtımı, kurallar ve "kim önce oynasın?" seçimi.
+"""Karşılama ekranı: oyuncu seçimi ve puan tablosu.
 
 Ödev, iki oyuncudan hangisinin önce oynayacağının başlangıçta seçilmesini
-ister. Seçim iki büyük düğmeyle yapılır; düğmeye basmak maçı başlatır.
+ister. Seçim arcade makinelerindeki "oyuncu seçimi" gibi iki büyük kartla
+yapılır; karta tıklamak (ya da 1 / 2 tuşu, ok tuşlarıyla seçip Enter) maçı
+başlatır. Altta, orijinal makinenin tanıtım ekranındaki gibi her nesnenin
+puanı kendi çizimiyle gösterilir.
 """
 
 import tkinter as tk
-from tkinter import ttk
 
 import theme
 from game import DEFAULT_RULES
+from game_screen import label, player_color, player_sprite
+from levels import Direction
 from match import AI, HUMAN
-from views import ghost_outline
+from views import draw_ghost, draw_pacman, ghost_color
 
+COLORS = theme.COLORS
 C = theme.CANVAS_COLORS
+
+
+class PlayerTile(tk.Canvas):
+    """Oyuncu seçim kartı: oyuncunun simgesi, adı, açıklaması ve kısayol tuşu."""
+
+    WIDTH, HEIGHT = 340, 168
+
+    def __init__(self, parent, player, title, description, key, command):
+        super().__init__(parent, width=theme.px(self.WIDTH), height=theme.px(self.HEIGHT),
+                         background=COLORS["bg"], highlightthickness=0, cursor="hand2", takefocus=1)
+        self.player, self.title, self.description, self.key = player, title, description, key
+        self.command = command
+        self.lit = False
+        for sequence, handler in (("<Enter>", lambda _e: self._light(True)),
+                                  ("<Leave>", lambda _e: self._light(self.focus_get() is self)),
+                                  ("<FocusIn>", lambda _e: self._light(True)),
+                                  ("<FocusOut>", lambda _e: self._light(False)),
+                                  ("<ButtonRelease-1>", lambda _e: self.invoke()),
+                                  ("<Return>", lambda _e: self.invoke()),
+                                  ("<space>", lambda _e: self.invoke())):
+            self.bind(sequence, handler)
+        self._draw()
+
+    def invoke(self):
+        self.command()
+
+    def _light(self, lit):
+        if lit != self.lit:
+            self.lit = lit
+            self._draw()
+
+    def _draw(self):
+        self.delete("all")
+        w, h = theme.px(self.WIDTH), theme.px(self.HEIGHT)
+        color = player_color(self.player)
+        # Seçilince kart oyuncunun rengiyle dolar; değilse yalnızca çerçeve.
+        fill = color if self.lit else COLORS["surface"]
+        ink = COLORS["on_accent"] if self.lit else COLORS["text"]
+        self.create_rectangle(2, 2, w - 2, h - 2, fill=fill, outline=color, width=3)
+        pad = theme.px(22)
+        sx, sy, sr = pad + theme.px(22), pad + theme.px(22), theme.px(22)
+        if not self.lit:
+            player_sprite(self, sx, sy, sr, self.player)
+        elif self.player == AI:
+            draw_ghost(self, sx, sy, sr, COLORS["on_accent"], Direction.LEFT)
+        else:
+            draw_pacman(self, sx, sy, sr, Direction.RIGHT, 60, color=COLORS["on_accent"])
+        self.create_text(w - pad, pad, anchor="ne", text=self.key, fill=ink if self.lit else color,
+                         font=theme.display_font("number"))
+        self.create_text(pad, h - pad - theme.px(26), anchor="sw", text=self.title, fill=ink,
+                         font=theme.ui_font("heading", "bold"))
+        self.create_text(pad, h - pad, anchor="sw", text=self.description,
+                         fill=ink if self.lit else COLORS["muted"], font=theme.ui_font("body"))
 
 
 class WelcomeScreen:
@@ -20,117 +78,86 @@ class WelcomeScreen:
         self.root = root
         self.scale = scale
         self.on_start = on_start            # on_start(ilk_oyuncu)
-        self.page = ttk.Frame(root, style="Page.TFrame", padding=self._px(theme.SPACING["page"]))
+        self.page = tk.Frame(root, background=COLORS["bg"])
         self.page.pack(fill="both", expand=True)
+        # İçerik sayfanın ortasında durur.
         self.page.columnconfigure(0, weight=1)
-        # İçerik sayfanın dikey ortasında durur; boş satırlar (0 ve 3) kalan yeri paylaşır.
         self.page.rowconfigure(0, weight=1)
-        self.page.rowconfigure(3, weight=1)
-        self._build_hero()
-        self._build_info()
+        self.page.rowconfigure(2, weight=1)
+        column = tk.Frame(self.page, background=COLORS["bg"])
+        column.grid(row=1, column=0)
+        self._build_title(column)
+        self._build_choice(column)
+        self._build_points(column)
+        self._build_rules(column)
+        self._keys = root.bind("<KeyPress>", self._on_key, add="+")
 
-    def _px(self, value):
-        return theme.px(value, self.scale)
+    def _build_title(self, column):
+        tk.Label(column, text="PACMAN", font=theme.display_font("hero"),
+                 foreground=COLORS["human"], background=COLORS["bg"]).pack()
+        label(column, "İnsan ve yapay zekâ aynı labirentte, aynı kurallarla sırayla oynar.", "lead", "muted").pack(
+            pady=(theme.px(18), 0))
+        label(column, "Kim önce oynasın?", "heading", bold=True).pack(pady=(theme.px(28), theme.px(14)))
 
-    # ------------------------------------------------------------------
-    def _build_hero(self):
-        outer, card = theme.card(self.page, 24, self.scale)
-        outer.grid(row=1, column=0, sticky="ew", pady=(0, self._px(theme.SPACING["gap"])))
-        card.columnconfigure(1, weight=1)
-
-        art = tk.Canvas(card, width=self._px(380), height=self._px(260), background=C["background"],
-                        highlightthickness=0, **theme.tk_options())
-        art.grid(row=0, column=0, sticky="w", padx=(0, self._px(32)))
-        art.bind("<Configure>", lambda event: draw_illustration(art, event.width, event.height))
-
-        text = ttk.Frame(card, style="Card.TFrame")
-        text.grid(row=0, column=1, sticky="w")
-        ttk.Label(text, text="Pacman", style="Card.TLabel", font=theme.font("hero_title", "bold"),
-                  foreground=theme.COLORS["hero_title"], background=theme.COLORS["card"]).pack(anchor="w")
-        ttk.Label(text, style="GuideBody.TLabel", wraplength=self._px(560), justify="left",
-                  text="İnsan oyuncu ve fayda tabanlı yapay zekâ aynı haritada, aynı kurallarla sırayla "
-                       "oynar. İkinci oyuncu için oyun sıfırlanır: harita, başlangıç konumları, yemekler "
-                       "ve hayaletler birebir aynıdır.").pack(anchor="w", pady=(self._px(6), self._px(20)))
-        ttk.Label(text, text="Kim önce oynasın?", style="GuideTitle.TLabel").pack(anchor="w")
-        buttons = ttk.Frame(text, style="Card.TFrame")
-        buttons.pack(anchor="w", pady=(self._px(10), 0))
-        self.human_button = ttk.Button(buttons, text="İnsan başlasın", style="Hero.TButton",
-                                       command=lambda: self.on_start(HUMAN))
+    def _build_choice(self, column):
+        row = tk.Frame(column, background=COLORS["bg"])
+        row.pack()
+        self.human_button = PlayerTile(row, HUMAN, "İnsan başlasın", "Klavyeyle sen oynarsın", "1",
+                                       lambda: self.on_start(HUMAN))
         self.human_button.pack(side="left")
-        self.ai_button = ttk.Button(buttons, text="Yapay zekâ başlasın", style="HeroAlt.TButton",
-                                    command=lambda: self.on_start(AI))
-        self.ai_button.pack(side="left", padx=(self._px(12), 0))
+        self.ai_button = PlayerTile(row, AI, "Yapay zekâ başlasın", "Fayda tabanlı ajan oynar", "2",
+                                    lambda: self.on_start(AI))
+        self.ai_button.pack(side="left", padx=(theme.px(20), 0))
 
-    def _build_info(self):
-        row = ttk.Frame(self.page, style="Page.TFrame")
-        row.grid(row=2, column=0, sticky="ew")
-        for column in range(3):
-            row.columnconfigure(column, weight=1, uniform="info")
+    def _build_points(self, column):
+        """Her nesnenin puanı, oyundaki çizimiyle (orijinal makinenin tanıtım ekranı gibi)."""
+        rules = DEFAULT_RULES
+        width, height = theme.px(700), theme.px(96)
+        canvas = tk.Canvas(column, width=width, height=height, background=COLORS["bg"], highlightthickness=0)
+        canvas.pack(pady=(theme.px(36), 0))
+        items = [
+            ("pellet", f"{rules.pellet:+d}", "Yemek"),
+            ("power", f"{rules.power:+d}", "Enerji topu"),
+            ("ghost", f"{rules.ghost:+d}", "Korkmuş hayalet"),
+            ("move", f"{rules.move_cost:+d}", "Her hareket"),
+        ]
+        slot = width / len(items)
+        r = theme.px(13)
+        for i, (kind, points, caption) in enumerate(items):
+            cx, cy = slot * i + slot / 2, theme.px(20)
+            if kind == "pellet":
+                canvas.create_oval(cx - r * 0.3, cy - r * 0.3, cx + r * 0.3, cy + r * 0.3, fill=C["pellet"], outline="")
+            elif kind == "power":
+                canvas.create_oval(cx - r * 0.7, cy - r * 0.7, cx + r * 0.7, cy + r * 0.7, fill=C["power"], outline="")
+            elif kind == "ghost":
+                draw_ghost(canvas, cx, cy, r, ghost_color(0), frightened=True)
+            else:
+                draw_pacman(canvas, cx, cy, r, Direction.RIGHT, 60)
+            canvas.create_text(cx, theme.px(56), text=points, font=theme.display_font("number"),
+                               fill=COLORS["danger"] if points.startswith("-") else COLORS["text"])
+            canvas.create_text(cx, theme.px(84), text=caption, font=theme.ui_font("body"), fill=COLORS["muted"])
+
+    def _build_rules(self, column):
         rules = DEFAULT_RULES
         seconds = rules.power_duration * rules.step_ms / 1000
-        cards = [
-            ("Puanlama", [
-                ("Her hareket", f"{rules.move_cost:+d}"),
-                ("Yemek", f"{rules.pellet:+d}"),
-                ("Enerji topu", f"{rules.power:+d}"),
-                ("Hayalet (enerji etkisinde)", f"{rules.ghost:+d}"),
-                ("Enerji etkisi", f"{rules.power_duration} adım ({seconds:g} sn)"),
-            ]),
-            ("Kazanan nasıl belirlenir?", [
-                ("1. Oyunu tamamlayan", ""),
-                ("2. Eşitse yüksek puan", ""),
-                ("3. Eşitse kısa süre", ""),
-                ("Hepsi eşitse beraberlik", ""),
-            ]),
-            ("Oyun", [
-                ("Seviyeler", "2 (giderek zorlaşır)"),
-                ("Kontroller", "Oklar veya W A S D"),
-                ("Duraklat", "Boşluk"),
-                ("Normal hayalete çarpmak", "Oyun biter"),
-                ("Süre", "Oyun içi adımla ölçülür"),
-            ]),
-        ]
-        for column, (title, lines) in enumerate(cards):
-            outer, card = theme.card(row, theme.SPACING["card"], self.scale)
-            outer.grid(row=0, column=column, sticky="nsew",
-                       padx=(0 if column == 0 else self._px(theme.SPACING["gap"]), 0))
-            ttk.Label(card, text=title, style="CardTitle.TLabel").pack(anchor="w", pady=(0, self._px(6)))
-            for label, value in lines:
-                line = ttk.Frame(card, style="Card.TFrame")
-                line.pack(fill="x", pady=(self._px(3), 0))
-                ttk.Label(line, text=label, style="Field.TLabel").pack(side="left")
-                if value:
-                    ttk.Label(line, text=value, style="Field.TLabel",
-                              font=theme.font("body", "bold")).pack(side="right")
+        lines = (
+            f"Enerji topu hayaletleri {rules.power_duration} adım ({seconds:g} saniye) korkutur; "
+            "korkmuş hayaleti yakalarsın, normal hayalete çarpınca tur biter.",
+            "Kazanan: önce bütün seviyeleri tamamlayan, eşitlikte yüksek puanlı, o da eşitse daha kısa süren.",
+        )
+        for i, text in enumerate(lines):
+            label(column, text, "body", "muted", wraplength=theme.px(700), justify="center").pack(
+                pady=(theme.px(28) if i == 0 else theme.px(6), 0))
+
+    def _on_key(self, event):
+        key = event.keysym
+        if key == "1":
+            self.human_button.invoke()
+        elif key == "2":
+            self.ai_button.invoke()
+        elif key in ("Left", "Right"):
+            (self.human_button if key == "Left" else self.ai_button).focus_set()
 
     def destroy(self):
+        self.root.unbind("<KeyPress>", self._keys)
         self.page.destroy()
-
-
-def draw_illustration(canvas, width, height):
-    """Karşılama görseli: enerji topuna doğru yemekleri yiyen Pacman ve peşindeki iki hayalet."""
-    canvas.delete("all")
-    r = width / 17                              # sahne yaklaşık 15 r genişliğinde, ortalanır
-    cy = height * 0.45
-    x = (width - 15 * r) / 2
-    canvas.create_oval(x, cy - r * 0.3, x + r * 0.6, cy + r * 0.3, fill=C["power"], outline="")
-    x += r * 1.5
-    for _ in range(5):                          # yemek sırası
-        canvas.create_oval(x - r * 0.12, cy - r * 0.12, x + r * 0.12, cy + r * 0.12, fill=C["pellet"], outline="")
-        x += r * 1.2
-    x += r * 0.4
-    # Pacman sola bakar (ağız 180° yönünde, 70° açık).
-    canvas.create_arc(x - r, cy - r, x + r, cy + r, start=180 + 35, extent=290,
-                      fill=C["pacman"], outline="", style="pieslice")
-    x += r * 2.6
-    for i, color in enumerate(C["ghosts"][:2]):
-        canvas.create_polygon(ghost_outline(x, cy, r, i), fill=color, outline="")
-        for dx in (-0.35, 0.35):                # gözler Pacman'e (sola) bakar
-            ex, ey = x + dx * r, cy - 0.15 * r
-            canvas.create_oval(ex - 0.22 * r, ey - 0.26 * r, ex + 0.22 * r, ey + 0.26 * r,
-                               fill=C["ghost_eye"], outline="")
-            canvas.create_oval(ex - 0.2 * r, ey - 0.1 * r, ex + 0.02 * r, ey + 0.12 * r,
-                               fill=C["ghost_pupil"], outline="")
-        x += r * 2.3
-    canvas.create_text(width / 2, height * 0.82, text="Fayda tabanlı rasyonel ajan",
-                       fill=C["wall_edge"], font=(theme.FONT_FAMILY, max(9, int(r * 0.5)), "bold"))

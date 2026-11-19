@@ -7,6 +7,7 @@ sonuçlarını çizer.
 import sys
 import tkinter as tk
 
+import fonts
 import theme
 from agent import UtilityAgent
 from game_screen import GameScreen
@@ -57,14 +58,14 @@ class AppShell:
 
     Akış: karşılama (kim önce?) → 1. tur → ara ekran → 2. tur → sonuç → karşılama.
 
-    Her geçişte önceki ekran tamamen kapatılır; yeni bir Tk kök penceresi
-    oluşturulmaz. Bu sayede ttkbootstrap'ın tek ``Style`` nesnesi korunur.
+    Her geçişte önceki ekran tamamen kapatılır (zamanlayıcılar, klavye
+    bağlantıları, bileşenler); yeni bir Tk kök penceresi oluşturulmaz.
     """
 
     def __init__(self, root):
         self.root = root
         self.scale = ui_scale(root)
-        self.style = theme.setup(root, self.scale)
+        self.fonts = theme.setup(root, self.scale)
         self.screen = None
         self.match = None
         root.title(APP_TITLE)
@@ -86,7 +87,7 @@ class AppShell:
         self._clear()
         run = self.match.new_run()
         agent = UtilityAgent() if run.player == AI else None
-        self.screen = GameScreen(self.root, self.scale, run, agent=agent,
+        self.screen = GameScreen(self.root, self.scale, run, agent=agent, turn=self.match.turn,
                                  on_finish=self._turn_finished, on_home=self.show_welcome)
 
     def _turn_finished(self, result):
@@ -110,6 +111,7 @@ class AppShell:
 
 def run():
     enable_windows_dpi_awareness()
+    fonts.load_bundled_fonts()          # pencereden önce: Tk yazı tiplerini açılışta tarar
     root = tk.Tk()
     AppShell(root)
     root.mainloop()

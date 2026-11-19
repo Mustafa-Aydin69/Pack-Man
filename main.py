@@ -1,10 +1,7 @@
 # Pacman — Fayda Tabanlı Rasyonel Ajan
 #
 # Gereksinimler : Python 3.9 veya üzeri ve Tkinter (Python'un Windows kurulumuyla gelir).
-#                 Arayüz teması için ttkbootstrap 1.14.7 (requirements.txt):
-#                     pip install -r requirements.txt
-#                 ttkbootstrap kurulu değilse program standart ttk temasıyla, aynı
-#                 işlevlerle çalışır; yalnızca görünüm sadeleşir.
+#                 Ek paket gerekmez.
 # Çalıştırma    : python main.py
 # Doğrulama     : python main.py --self-test   (pencere açmadan; çıkış kodu 0 = başarılı)
 # Testler       : python -m unittest discover -s tests -v
@@ -22,7 +19,9 @@
 #   views.py      oyun tahtasının çizimi (labirent, yemekler, Pacman, hayaletler)
 #   welcome.py    karşılama ekranı: kim önce oynasın, kurallar
 #   results.py    turlar arası ekran ve maç sonucu (kazanan)
-#   theme.py      arayüz teması: renkler, yazı tipleri, ttkbootstrap stilleri
+#   theme.py      arayüz teması: renkler, yazı tipleri, ölçek
+#   fonts.py      programla gelen piksel yazı tipinin yüklenmesi (assets/fonts)
+#   widgets.py    düğme, enerji çubuğu, AI pusulası, tuş şeması
 #   timers.py     duraklatılabilen zamanlayıcı (oyun adımı)
 #   self_test.py  --self-test doğrulaması
 """Uygulamanın giriş noktası."""
