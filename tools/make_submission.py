@@ -29,7 +29,7 @@ def build(exe_path, zip_path):
     with open(os.path.join(ROOT, "submission", "README.txt"), encoding="utf-8") as handle:
         readme = handle.read().replace("\r\n", "\n").replace("\n", "\r\n")
     with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-        archive.writestr("README.txt", "﻿" + readme)
+        archive.writestr("README.txt", "\ufeff" + readme)
         archive.write(exe_path, "Pacman.exe")
         files = source_files()
         for path in files:

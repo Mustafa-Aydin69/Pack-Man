@@ -11,7 +11,7 @@
 
 Akıcı hareket: oyun mantığı kareden kareye, her ``Rules.step_ms``'de bir
 adım ilerler. Çizim ise karakterleri bir önceki karelerinden yeni
-karelerine doğru ``progress`` (0 → 1) oranında kaydırır (ara kare,
+karelerine doğru ``progress`` (0'dan 1'e) oranında kaydırır (ara kare,
 "interpolation"). Mantık değişmez; yalnızca görüntü akıcılaşır.
 
 Bu modül oyun durumunu yalnızca okur, değiştirmez.

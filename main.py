@@ -1,4 +1,4 @@
-# Pacman — Fayda Tabanlı Rasyonel Ajan
+# Pacman - Fayda Tabanlı Rasyonel Ajan
 #
 # Gereksinimler : Python 3.9 veya üzeri ve Tkinter (Python'un Windows kurulumuyla gelir).
 #                 Ek paket gerekmez.

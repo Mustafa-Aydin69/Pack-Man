@@ -56,7 +56,7 @@ def configure_window_size(root, scale):
 class AppShell:
     """Tek ana pencerede ekranlar arası geçiş.
 
-    Akış: karşılama (kim önce?) → 1. tur → ara ekran → 2. tur → sonuç → karşılama.
+    Akış: karşılama (kim önce?), 1. tur, ara ekran, 2. tur, sonuç, yeniden karşılama.
 
     Her geçişte önceki ekran tamamen kapatılır (zamanlayıcılar, klavye
     bağlantıları, bileşenler); yeni bir Tk kök penceresi oluşturulmaz.

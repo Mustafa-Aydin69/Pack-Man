@@ -171,7 +171,7 @@ def parse_level(name, text):
 # Hazır seviyeler
 # ----------------------------------------------------------------------
 # Seviye 1: 2 hayalet, geniş ve tamamen döngülü koridorlar; çıkmaz sokak
-# yoktur, her kareden en az iki yöne kaçılabilir. Hayaletler Pacman'den 15–16
+# yoktur, her kareden en az iki yöne kaçılabilir. Hayaletler Pacman'den 15-16
 # adım uzakta başlar.
 LEVEL_1 = """
 ###################

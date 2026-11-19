@@ -24,7 +24,7 @@ class RunResult:
     player: str
     completed: bool             # bütün seviyeler tamamlandı mı
     score: int
-    elapsed_ms: int             # oyun içi süre (adım × adım süresi)
+    elapsed_ms: int             # oyun içi süre (adım sayısı * adım süresi)
     steps: int
     levels_completed: int
     level_count: int

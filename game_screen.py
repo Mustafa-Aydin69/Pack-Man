@@ -10,8 +10,8 @@ hâkimi, ayrıntılar alt şeritte. Sağdaki panel yapay zekâ oynarken "AI
 pusulasını" (her yönün beklenen faydası), insan oynarken basılan yönü
 gösteren tuş şemasını içerir.
 
-Akış: geri sayım (3-2-1) → oyun → seviye bitince geçiş mesajı ve sonraki
-seviyenin geri sayımı → tur bitince sonuç mesajı → ``on_finish(RunResult)``.
+Akış: geri sayım (3-2-1), oyun, seviye bitince geçiş mesajı ve sonraki
+seviyenin geri sayımı, tur bitince sonuç mesajı ve ``on_finish(RunResult)``.
 """
 
 import tkinter as tk

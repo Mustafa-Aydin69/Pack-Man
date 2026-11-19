@@ -8,7 +8,7 @@ utility) yönü seçer:
 2. Hayaletlerin o adımdaki **olası her cevabını**, olasılığıyla birlikte
    ayrı bir kopyada oynatır (aşağıya bakın).
 3. Her sonucu **fayda fonksiyonu** ile puanlar ve olasılıklarla ağırlıklı
-   ortalamasını alır: ``EU(yön) = Σ P(sonuç) × U(sonuç)``.
+   ortalamasını alır: ``EU(yön) = toplam[ P(sonuç) * U(sonuç) ]``.
 4. Bunu ``depth`` adım ileriye kadar sürdürür (expectimax: Pacman'in
    sırasında en iyi yön, hayaletlerin sırasında olasılık ağırlıklı ortalama)
    ve beklenen faydası en yüksek yönü seçer.
@@ -31,20 +31,20 @@ faydasına dayanır.
 
 Fayda fonksiyonu
 ----------------
-Ulaşılan bir durum ``s`` (kökteki durum ``s₀``) için:
+Ulaşılan bir durum ``s`` (kökteki durum ``s0``) için:
 
-    U(s) = W_SCORE × (s.puan − s₀.puan)            puan değişimi (hareket maliyeti dahil)
-         + W_EAT   × (yenen yemek sayısı)
-         − W_FOOD  × (en yakın güvenli yemeğe BFS mesafesi)
-         − Σ tehlike(normal hayalet)                hayalet riski
-         − kapan(güvenli kare sayısı)               kaçış alanı
-         + Σ av(korkmuş hayalet)                    enerji etkisi
-    U(s) = s Pacman'in yakalandığı durumsa  −LOSS + puan değişimi
+    U(s) = W_SCORE * (s.puan - s0.puan)            puan değişimi (hareket maliyeti dahil)
+         + W_EAT   * (yenen yemek sayısı)
+         - W_FOOD  * (en yakın güvenli yemeğe BFS mesafesi)
+         - toplam tehlike(normal hayalet)           hayalet riski
+         - kapan(güvenli kare sayısı)               kaçış alanı
+         + toplam av(korkmuş hayalet)               enerji etkisi
+    U(s) = s Pacman'in yakalandığı durumsa  -LOSS + puan değişimi
     U(s) = s seviyenin tamamlandığı durumsa  +WIN + puan değişimi
 
 Seçilen yön son yönün tersiyse ayrıca ``W_REVERSE`` düşülür (salınım
 cezası). Hareket maliyeti ayrı bir terim değildir: oyunun kendi kuralı (her
-hareket −1) puan değişiminin içindedir; yerinde durmak da seçenek değildir
+hareket -1) puan değişiminin içindedir; yerinde durmak da seçenek değildir
 (ödevde yalnızca dört yön vardır). Bileşenlerin ve ağırlıkların gerekçesi
 ``Weights`` sınıfındadır.
 
@@ -66,13 +66,13 @@ class Weights:
     ``tools/benchmark_agent.py`` ile birçok seed'de ölçülerek ayarlanmıştır.
     """
 
-    # Puan değişimi (yemek +10, enerji topu +50, hayalet +200, hareket −1).
+    # Puan değişimi (yemek +10, enerji topu +50, hayalet +200, hareket -1).
     # Oyunun asıl hedefi puan olduğu için 1'dir; diğer ağırlıklar buna göre
     # ölçeklenir.
     score: float = 1.0
 
     # En yakın güvenli yemeğe her BFS adımı. Yemek uzaktayken puan değişimi
-    # her yönde aynıdır (−1); ajanı yemeğe çeken bu terimdir. Yemek ödülünden
+    # her yönde aynıdır (-1); ajanı yemeğe çeken bu terimdir. Yemek ödülünden
     # (10) küçük tutulur ki ajan bir yemeği yemek yerine "başka bir yemeğe
     # yaklaşmayı" seçmesin.
     food: float = 2.0
@@ -88,14 +88,14 @@ class Weights:
     unsafe_food: int = 20
 
     # Normal hayalet tehlikesi. Hayalet ``danger_radius`` BFS adımından
-    # yakınsa ceza ``danger × ((R − d + 1) / R)²``: uzakta neredeyse sıfır,
+    # yakınsa ceza ``danger * ((R - d + 1) / R) ** 2``: uzakta neredeyse sıfır,
     # yaklaştıkça hızla büyür. Yakalanma ihtimali zaten sonuçların içinde
     # olduğu için bu terim yalnızca "yakın gelecekte" riski temsil eder.
     danger: float = 150.0
     danger_radius: int = 5
 
     # Kaçış alanı: Pacman'in hayaletlerden önce varabildiği kare sayısı
-    # ``trap_threshold``'un altına inince ``trap × (eksik / eşik)²`` ceza.
+    # ``trap_threshold``'un altına inince ``trap * (eksik / eşik) ** 2`` ceza.
     # İki hayalet arasında koridora sıkışmak (sandviç) bu sayıyı hızla
     # düşürür; mesafe cezası bu durumu tek başına göremez.
     trap: float = 400.0
