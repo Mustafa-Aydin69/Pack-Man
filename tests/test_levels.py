@@ -62,6 +62,12 @@ class BfsTests(unittest.TestCase):
         self.assertEqual(distances[(3, 5)], 6)
         self.assertNotIn((2, 3), distances)       # duvar
 
+    def test_distances_from_is_cached(self):
+        level = parse_level("small", SMALL)
+        first = level.distances_from((1, 1))
+        self.assertEqual(first, bfs_distances(level, (1, 1)))
+        self.assertIs(level.distances_from((1, 1)), first)
+
     def test_moves_from_respects_walls(self):
         level = parse_level("small", SMALL)
         moves = dict(level.moves_from((1, 1)))

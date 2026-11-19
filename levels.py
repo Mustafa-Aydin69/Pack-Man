@@ -17,7 +17,7 @@ bir harita hiç oluşturulamaz.
 """
 
 from collections import deque
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 
 WALL, PELLET, POWER, PACMAN, GHOST, EMPTY = "#", ".", "o", "P", "G", " "
@@ -76,6 +76,18 @@ class Level:
     powers: frozenset
     pacman_start: tuple
     ghost_starts: tuple
+    # Harita değişmediği için bir kareden BFS sonucu da değişmez; hayaletler ve
+    # ajan aynı kareden defalarca mesafe sorduğu için sonuçlar saklanır.
+    # Eşitlik ve hash hesabına katılmaz.
+    _distance_cache: dict = field(default_factory=dict, compare=False, hash=False, repr=False)
+
+    def distances_from(self, position):
+        """``position``'dan bütün erişilebilir karelere BFS mesafesi (önbellekli, salt okunur kullanın)."""
+        distances = self._distance_cache.get(position)
+        if distances is None:
+            distances = bfs_distances(self, position)
+            self._distance_cache[position] = distances
+        return distances
 
     def is_open(self, position):
         """Karede duvar yoksa True. Harita kenarı duvarla kapalı olduğu için sınır dışı kare oluşmaz."""
