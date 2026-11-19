@@ -11,6 +11,7 @@ Pencereli (konsolsuz) EXE'de ekrana yazı basılamadığı için sonuçlar
 
 import sys
 
+from agent import UtilityAgent
 from game import GameState, Status
 from ghosts import new_game
 from levels import LEVELS, Direction, bfs_distances
@@ -51,6 +52,16 @@ def _check_seed_repeats():
     return "seed ile tekrarlanabilir oyun"
 
 
+def _check_agent():
+    """Fayda tabanlı ajan Seviye 1'i tamamlıyor mu? (Arayüzsüz, birkaç saniye.)"""
+    state = new_game(LEVELS[0])
+    agent = UtilityAgent()
+    while not state.is_over and state.steps < 2000:
+        state.step(agent.choose(state))
+    assert state.status is Status.WON, f"ajan seviyeyi tamamlayamadı ({state.status.value})"
+    return f"ajan Seviye 1'i {state.steps} adımda, {state.score} puanla tamamladı"
+
+
 def _check_tkinter_available():
     """Tkinter ve Tcl/Tk kitaplıkları paketlenmiş mi? (Pencere açmaz.)"""
     import tkinter
@@ -69,6 +80,7 @@ CHECKS = [
     _check_levels,
     _check_game_rules,
     _check_seed_repeats,
+    _check_agent,
     _check_tkinter_available,
     _check_theme,
 ]
