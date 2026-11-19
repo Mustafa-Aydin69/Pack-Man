@@ -186,7 +186,7 @@ class BoardView:
         else:
             colors = C["ghosts"]
             body = colors[index % len(colors)]
-        canvas.create_polygon(_ghost_outline(cx, cy, r, frame), fill=body, outline="", tags="dynamic")
+        canvas.create_polygon(ghost_outline(cx, cy, r, frame), fill=body, outline="", tags="dynamic")
 
         if ghost.frightened:
             # Korkmuş yüz: küçük gözler ve titrek ağız.
@@ -236,7 +236,7 @@ class BoardView:
         self.canvas.tag_raise("overlay")
 
 
-def _ghost_outline(cx, cy, r, frame):
+def ghost_outline(cx, cy, r, frame):
     """Hayalet gövdesi: üstte yarım daire, altta dalgalı etek (etek adım başına kıpırdar)."""
     points = []
     for i in range(13):                         # üst yarım daire (soldan sağa)
