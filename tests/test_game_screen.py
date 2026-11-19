@@ -54,19 +54,21 @@ class GameScreenTests(unittest.TestCase):
         screen = self.make(ai=False)
         screen.phase = "playing"
         self.press("Left")
+        self.assertIs(screen.keypad.active, Direction.LEFT)     # tuş şeması basılan yönü gösterir
         start = screen.run.state.pacman
         screen._tick()
         self.assertNotEqual(screen.run.state.pacman, start)
-        self.assertEqual(screen.stats["score"].cget("text"), str(screen.run.score))
+        self.assertEqual(int(screen.stats["score"].cget("text")), screen.run.score)
 
     def test_ai_tick_fills_decision_panel(self):
         screen = self.make(ai=True)
         screen.phase = "playing"
+        before = screen.run.state.pacman
         screen._tick()
-        rows = screen.ai_table.get_children()
-        self.assertEqual(len(rows), len(screen.agent.last_evaluations))
-        chosen = [row for row in rows if "chosen" in screen.ai_table.item(row, "tags")]
-        self.assertEqual(len(chosen), 1)
+        chosen = screen.compass.chosen
+        self.assertEqual(chosen.apply(before), screen.run.state.pacman)   # pusula seçilen yönü gösterir
+        self.assertIn(chosen.label, screen.decision_text.cget("text"))
+        self.assertNotEqual(screen.part_values["Yemek"].cget("text"), "–")
 
     def test_ai_ignores_keyboard(self):
         screen = self.make(ai=True)
