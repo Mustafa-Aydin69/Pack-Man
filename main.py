@@ -16,10 +16,12 @@
 #   game.py       oyun kuralları, puanlama ve oyun durumu (arayüzden bağımsız)
 #   ghosts.py     hayalet stratejileri: takipçi, gezgin, korkmuş (kaçan)
 #   agent.py      fayda tabanlı rasyonel ajan (fayda fonksiyonu ve ağırlıklar)
-#   match.py      bir oyuncunun turu: seviye geçişi ve toplam sonuç
+#   match.py      tur (seviye geçişi, toplam sonuç), maç sırası ve kazanan kuralı
 #   gui.py        Tkinter ana penceresi ve ekranlar arası geçiş
 #   game_screen.py oyun ekranı: oyun döngüsü, gösterge paneli, klavye, AI karar paneli
 #   views.py      oyun tahtasının çizimi (labirent, yemekler, Pacman, hayaletler)
+#   welcome.py    karşılama ekranı: kim önce oynasın, kurallar
+#   results.py    turlar arası ekran ve maç sonucu (kazanan)
 #   theme.py      arayüz teması: renkler, yazı tipleri, ttkbootstrap stilleri
 #   timers.py     duraklatılabilen zamanlayıcı (oyun adımı)
 #   self_test.py  --self-test doğrulaması
