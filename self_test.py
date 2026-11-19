@@ -11,6 +11,47 @@ Pencereli (konsolsuz) EXE'de ekrana yazı basılamadığı için sonuçlar
 
 import sys
 
+from game import GameState, Status
+from levels import LEVELS, Direction, bfs_distances
+
+
+def _check_levels():
+    """Hazır seviyeler yükleniyor ve her yemeğe ulaşılabiliyor mu?"""
+    for level in LEVELS:
+        reachable = bfs_distances(level, level.pacman_start)
+        assert level.pellets <= reachable.keys(), f"{level.name}: erişilemeyen yemek"
+        assert len(level.ghost_starts) >= 2, f"{level.name}: hayalet sayısı"
+    return f"{len(LEVELS)} seviye yüklendi; bütün yemekler erişilebilir"
+
+
+def _check_game_rules():
+    """Bir adımın puanı ve kopyanın bağımsızlığı (hayaletler hareketsiz)."""
+    state = GameState(LEVELS[0])
+    direction = state.legal_directions()[0]
+    copy = state.clone()
+    result = copy.step(direction)
+    assert result.moved and copy.steps == 1
+    assert copy.score in (state.rules.move_cost, state.rules.move_cost + state.rules.pellet,
+                          state.rules.move_cost + state.rules.power)
+    assert state.steps == 0 and state.pacman == LEVELS[0].pacman_start, "kopya asıl oyunu değiştirdi"
+    assert state.status is Status.PLAYING
+    return "oyun adımı, puanlama ve durum kopyalama"
+
+
+def _check_seed_repeats():
+    """Aynı seed ve aynı hamleler aynı oyunu üretir (iki oyuncu için eşit koşul)."""
+    def policy(state, ghost):
+        return state.rng.choice([d for d, _ in state.level.moves_from(ghost.position)])
+
+    def run():
+        state = GameState(LEVELS[1], seed=42, ghost_policy=policy)
+        moves = (Direction.LEFT, Direction.UP, Direction.RIGHT, Direction.DOWN)
+        for i in range(300):
+            state.step(moves[i // 7 % 4])
+        return state.pacman, state.score, state.steps, [g.position for g in state.ghosts], state.status
+    assert run() == run(), "Aynı seed aynı oyunu vermedi"
+    return "seed ile tekrarlanabilir oyun"
+
 
 def _check_tkinter_available():
     """Tkinter ve Tcl/Tk kitaplıkları paketlenmiş mi? (Pencere açmaz.)"""
@@ -27,6 +68,9 @@ def _check_theme():
 
 
 CHECKS = [
+    _check_levels,
+    _check_game_rules,
+    _check_seed_repeats,
     _check_tkinter_available,
     _check_theme,
 ]
