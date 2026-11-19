@@ -11,6 +11,9 @@ titreyebilir, rastgele hayalet de koridorda yerinde sayardı. Klasik
 Pacman'deki hayaletler de geri dönmez.
 """
 
+from game import DEFAULT_RULES, DEFAULT_SEED, GameState
+
+
 def _options(state, ghost):
     """Geri dönüş hariç geçerli hareketler; başka yol yoksa geri dönüş."""
     moves = state.level.moves_from(ghost.position)
@@ -64,3 +67,35 @@ def flee(state, ghost):
 
     best = min(state.level.moves_from(ghost.position), key=preference)
     return best[0]
+
+
+# ----------------------------------------------------------------------
+# Hayaletlerin oyuna bağlanması
+# ----------------------------------------------------------------------
+# İlk hayalet takipçi, diğerleri gezgindir. Hepsi takipçi olsaydı aynı yolu
+# izleyip tek bir hayalet gibi davranırlardı; hepsi gezgin olsaydı Pacman'i
+# hiç kovalamazlardı. Karışım hem baskı hem öngörülemezlik yaratır.
+STRATEGY_NAMES = ("Takipçi", "Gezgin")
+
+
+def strategy_name(index):
+    return STRATEGY_NAMES[0] if index == 0 else STRATEGY_NAMES[1]
+
+
+def policy(state, ghost):
+    """``GameState(ghost_policy=...)`` için: her hayaleti sırasına göre yönetir.
+
+    Korkmuş hayalet yarı hızda hareket eder (tek numaralı adımlarda yerinde
+    kalır). Aynı hızda kaçan bir hayaleti yakalamak çoğu zaman imkânsız
+    olurdu; enerji topunun anlamı kalmazdı.
+    """
+    if ghost.frightened:
+        return None if state.steps % 2 else flee(state, ghost)
+    index = next(i for i, other in enumerate(state.ghosts) if other is ghost)
+    return chase(state, ghost) if index == 0 else wander(state, ghost)
+
+
+def new_game(level, rules=DEFAULT_RULES, seed=DEFAULT_SEED):
+    """Standart hayaletlerle yeni oyun. İki oyuncu da bu fonksiyonla, aynı
+    seviye, kurallar ve seed ile başlatılır."""
+    return GameState(level, rules, seed, ghost_policy=policy)

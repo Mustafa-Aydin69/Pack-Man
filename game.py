@@ -46,6 +46,10 @@ class Rules:
 
 DEFAULT_RULES = Rules()
 
+# Hayaletlerin rastgele kararlarının seed'i. İki oyuncu aynı seed ile oynar;
+# sabit olduğu için oyun her açılışta da aynı koşullarla başlar.
+DEFAULT_SEED = 2026
+
 
 class Status(Enum):
     PLAYING = "Oynanıyor"

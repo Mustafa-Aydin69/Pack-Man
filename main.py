@@ -13,6 +13,7 @@
 #   main.py       giriş noktası
 #   levels.py     seviye haritaları, yönler, BFS ve harita doğrulaması
 #   game.py       oyun kuralları, puanlama ve oyun durumu (arayüzden bağımsız)
+#   ghosts.py     hayalet stratejileri: takipçi, gezgin, korkmuş (kaçan)
 #   gui.py        Tkinter ana penceresi ve ekranlar arası geçiş
 #   theme.py      arayüz teması: renkler, yazı tipleri, ttkbootstrap stilleri
 #   timers.py     duraklatılabilen zamanlayıcı (oyun adımı)

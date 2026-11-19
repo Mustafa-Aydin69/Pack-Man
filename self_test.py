@@ -12,6 +12,7 @@ Pencereli (konsolsuz) EXE'de ekrana yazı basılamadığı için sonuçlar
 import sys
 
 from game import GameState, Status
+from ghosts import new_game
 from levels import LEVELS, Direction, bfs_distances
 
 
@@ -39,12 +40,9 @@ def _check_game_rules():
 
 
 def _check_seed_repeats():
-    """Aynı seed ve aynı hamleler aynı oyunu üretir (iki oyuncu için eşit koşul)."""
-    def policy(state, ghost):
-        return state.rng.choice([d for d, _ in state.level.moves_from(ghost.position)])
-
+    """Aynı seed ve aynı hamleler, standart hayaletlerle aynı oyunu üretir (iki oyuncu için eşit koşul)."""
     def run():
-        state = GameState(LEVELS[1], seed=42, ghost_policy=policy)
+        state = new_game(LEVELS[1], seed=42)
         moves = (Direction.LEFT, Direction.UP, Direction.RIGHT, Direction.DOWN)
         for i in range(300):
             state.step(moves[i // 7 % 4])
