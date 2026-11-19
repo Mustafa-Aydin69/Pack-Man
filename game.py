@@ -53,9 +53,14 @@ class Status(Enum):
     LOST = "Yakalandı"
 
 
-@dataclass
+@dataclass(eq=False)
 class Ghost:
-    """Bir hayaletin değişen durumu."""
+    """Bir hayaletin değişen durumu.
+
+    ``eq=False``: aynı karede, aynı durumdaki iki hayalet yine de farklı
+    nesnelerdir; listede aranırken birbirine karışmamaları için eşitlik
+    kimliğe (``is``) göredir.
+    """
 
     position: tuple
     start: tuple
@@ -73,14 +78,23 @@ class StepResult:
     moved: bool = False
     ate_pellet: bool = False
     ate_power: bool = False
+    ghosts_eaten: int = 0
+    caught: bool = False
 
 
 class GameState:
-    """Tek bir seviyenin oyun durumu."""
+    """Tek bir seviyenin oyun durumu.
 
-    def __init__(self, level, rules=DEFAULT_RULES, seed=0):
+    ``ghost_policy(state, ghost)`` hayaletin bu adımdaki yönünü döndüren
+    fonksiyondur (``None``: yerinde kal). Hayalet stratejileri ``ghosts``
+    modülündedir; çekirdek onları bilmez, yalnızca verilen fonksiyonu çağırır.
+    Politika verilmezse hayaletler hareket etmez (testlerde kullanılır).
+    """
+
+    def __init__(self, level, rules=DEFAULT_RULES, seed=0, ghost_policy=None):
         self.level = level
         self.rules = rules
+        self.ghost_policy = ghost_policy
         self.pacman = level.pacman_start
         self.direction = None           # Pacman'in son hareket yönü
         self.pellets = set(level.pellets)
@@ -89,6 +103,7 @@ class GameState:
         self.score = 0
         self.steps = 0
         self.power_left = 0             # enerji etkisinin kalan adım sayısı
+        self.ghosts_eaten = 0
         self.status = Status.PLAYING
         # Hayaletlerin rastgele kararları bu üreteçten gelir. Seed aynı olduğu
         # sürece iki oyuncu aynı rastgele dizilerle karşılaşır.
@@ -132,9 +147,25 @@ class GameState:
         result = StepResult()
         if self.is_over:
             return result
+        # Önce Pacman, sonra hayaletler hareket eder ve her yarı adımdan sonra
+        # karşılaşma denetlenir. Pacman hayaletlerin henüz hareket etmemiş
+        # konumlarına göre denetlendiği için "yer değiştirme" (Pacman A'dan B'ye,
+        # hayalet B'den A'ya) her zaman ilk denetimde aynı kare olarak yakalanır;
+        # karakterler birbirinin içinden geçemez.
         self._move_pacman(requested, result)
-        self._eat(result)
-        self._tick_power(result)
+        # Normal hayalete yürüyen Pacman o karedeki yemeği alamaz; denetim bu
+        # yüzden yemekten önce yapılır.
+        self._resolve_collisions(result)
+        if not self.is_over:
+            self._eat(result)
+            if not self.pellets:
+                # Son yemek alındığında seviye hemen biter; hayaletler o adımda
+                # artık hareket etmez.
+                self.status = Status.WON
+        if not self.is_over:
+            self._move_ghosts()
+            self._resolve_collisions(result)
+        self._tick_power()
         self.steps += 1
         return result
 
@@ -165,7 +196,36 @@ class GameState:
                 ghost.frightened = True
             result.ate_power = True
 
-    def _tick_power(self, result):
+    def _move_ghosts(self):
+        if self.ghost_policy is None:
+            return
+        for ghost in self.ghosts:
+            direction = self.ghost_policy(self, ghost)
+            if direction is None:
+                continue
+            target = direction.apply(ghost.position)
+            if self.level.is_open(target):
+                ghost.position = target
+                ghost.direction = direction
+
+    def _resolve_collisions(self, result):
+        """Pacman'le aynı karedeki hayaletleri çözer: korkmuşsa yenir, değilse oyun biter."""
+        for ghost in self.ghosts:
+            if ghost.position != self.pacman:
+                continue
+            if ghost.frightened:
+                # Yenen hayalet başlangıç karesine döner ve bu enerji etkisi
+                # boyunca bir daha korkmaz; aynı hayalet arka arkaya yenemez.
+                self.score += self.rules.ghost
+                self.ghosts_eaten += 1
+                result.ghosts_eaten += 1
+                ghost.position, ghost.direction, ghost.frightened = ghost.start, None, False
+            else:
+                self.status = Status.LOST
+                result.caught = True
+                return
+
+    def _tick_power(self):
         # Topun yendiği adım da etkinin ilk adımı sayılır; geri sayım bu yüzden
         # o adımın sonunda başlar.
         if self.power_left == 0:
