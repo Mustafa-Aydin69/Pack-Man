@@ -109,3 +109,79 @@ class Run:
             pellets_eaten=self._banked_pellets + len(state.level.pellets) - state.pellets_left,
             ghosts_eaten=self._banked_ghosts + state.ghosts_eaten,
         )
+
+
+# ----------------------------------------------------------------------
+# Maç: iki tur ve kazanan
+# ----------------------------------------------------------------------
+@dataclass(frozen=True)
+class Verdict:
+    """Maçın sonucu. ``winner`` beraberlikte ``None``'dır."""
+
+    winner: RunResult
+    loser: RunResult
+    criterion: str              # kazananı belirleyen ölçüt (ekranda gösterilir)
+
+    @property
+    def is_draw(self):
+        return self.winner is None
+
+
+def decide_winner(first, second):
+    """Ödevin sırasıyla kazananı belirler.
+
+    1. Oyunu tamamlama durumu: tamamlayan, tamamlayamayanı yener.
+    2. Toplam puan: yüksek olan kazanır.
+    3. Süre: eşitlikte daha kısa sürede bitiren kazanır.
+    4. Bütün ölçütler eşitse beraberlik.
+    """
+    if first.completed != second.completed:
+        winner, loser = (first, second) if first.completed else (second, first)
+        return Verdict(winner, loser, "Oyunu tamamladı")
+    if first.score != second.score:
+        winner, loser = (first, second) if first.score > second.score else (second, first)
+        return Verdict(winner, loser, "Daha yüksek puan")
+    if first.elapsed_ms != second.elapsed_ms:
+        winner, loser = (first, second) if first.elapsed_ms < second.elapsed_ms else (second, first)
+        return Verdict(winner, loser, "Daha kısa süre")
+    return Verdict(None, None, "Bütün ölçütler eşit")
+
+
+class Match:
+    """İki oyuncunun sırayla oynadığı maç. Sırayı kullanıcı seçer."""
+
+    def __init__(self, first_player):
+        if first_player not in (HUMAN, AI):
+            raise ValueError(f"Bilinmeyen oyuncu: {first_player}")
+        second_player = AI if first_player == HUMAN else HUMAN
+        self.order = (first_player, second_player)
+        self.results = []
+
+    @property
+    def is_over(self):
+        return len(self.results) == len(self.order)
+
+    @property
+    def turn(self):
+        """Sıradaki turun numarası (1 ya da 2)."""
+        return len(self.results) + 1
+
+    @property
+    def current_player(self):
+        return None if self.is_over else self.order[len(self.results)]
+
+    def new_run(self):
+        """Sıradaki oyuncu için sıfırdan bir tur. Her tur aynı seviyeler, kurallar ve seed ile başlar."""
+        return Run(self.current_player)
+
+    def record(self, result):
+        if self.is_over:
+            raise RuntimeError("Maç bitti")
+        if result.player != self.current_player:
+            raise ValueError(f"Sıra {self.current_player} oyuncusunda")
+        self.results.append(result)
+
+    def verdict(self):
+        if not self.is_over:
+            raise RuntimeError("Maç bitmedi")
+        return decide_winner(*self.results)
