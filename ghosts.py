@@ -14,8 +14,12 @@ Pacman'deki hayaletler de geri dönmez.
 from game import DEFAULT_RULES, DEFAULT_SEED, GameState
 
 
-def _options(state, ghost):
-    """Geri dönüş hariç geçerli hareketler; başka yol yoksa geri dönüş."""
+def allowed_moves(state, ghost):
+    """Hayaletin kurallara göre gidebileceği kareler: geri dönüş hariç; başka yol yoksa geri dönüş.
+
+    Ajan da bunu kullanır: hayaletin nereye *gidebileceğini* kurallardan bilir,
+    ama hangisini *seçeceğini* bilmez.
+    """
     moves = state.level.moves_from(ghost.position)
     if ghost.direction is not None:
         forward = [(d, target) for d, target in moves if d is not ghost.direction.opposite]
@@ -24,15 +28,32 @@ def _options(state, ghost):
     return moves
 
 
-def chase(state, ghost):
-    """Takipçi: Pacman'e BFS ile en kısa yolu kısaltan yönü seçer.
+# Takipçinin döngüsü: CHASE_STEPS adım Pacman'i kovalar, ardından
+# SCATTER_STEPS adım başlangıç karesine çekilir (klasik Pacman'deki "dağılma"
+# modu). Hiç durmadan kovalayan, Pacman'le aynı hızdaki bir hayalet enerji
+# topları bittikten sonra hiç atlatılamaz; Pacman'in bir yemek için kısa bir
+# koridora girmesi bile imkânsızlaşır. Çekilme süreleri oyuna nefes aldırır.
+# Döngü adım sayısına bağlıdır; iki oyuncu için de aynı anlarda olur.
+CHASE_STEPS = 30
+SCATTER_STEPS = 8
 
-    Mesafeler Pacman'in karesinden hesaplanır (tek BFS bütün hayaletlere
-    yeter, sonuç ``Level`` önbelleğinde tutulur). Eşit mesafede yön sırası
-    ``levels.DIRECTIONS`` sırasıdır; bu yüzden karar her zaman aynıdır.
+
+def is_scattering(state):
+    """Takipçi şu an çekilme (dağılma) modunda mı?"""
+    return state.steps % (CHASE_STEPS + SCATTER_STEPS) >= CHASE_STEPS
+
+
+def chase(state, ghost):
+    """Takipçi: hedefine BFS ile en kısa yolu kısaltan yönü seçer.
+
+    Hedef kovalama modunda Pacman'in karesi, çekilme modunda hayaletin kendi
+    başlangıç karesidir. Mesafeler hedef kareden hesaplanır (sonuç ``Level``
+    önbelleğinde tutulur). Eşit mesafede yön sırası ``levels.DIRECTIONS``
+    sırasıdır; bu yüzden karar her zaman aynıdır.
     """
-    distances = state.level.distances_from(state.pacman)
-    best = min(_options(state, ghost), key=lambda option: distances.get(option[1], float("inf")))
+    target = ghost.start if is_scattering(state) else state.pacman
+    distances = state.level.distances_from(target)
+    best = min(allowed_moves(state, ghost), key=lambda option: distances.get(option[1], float("inf")))
     return best[0]
 
 
@@ -45,7 +66,7 @@ def wander(state, ghost):
     üretecin kopyasını taşıdığı için ajan, hayaletin bir sonraki adımını
     gerçek oyundakiyle aynı biçimde simüle eder.
     """
-    direction, _ = state.rng.choice(_options(state, ghost))
+    direction, _ = state.rng.choice(allowed_moves(state, ghost))
     return direction
 
 

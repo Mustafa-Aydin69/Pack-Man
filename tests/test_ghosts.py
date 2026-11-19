@@ -79,6 +79,28 @@ class FleeTests(unittest.TestCase):
         self.assertEqual(ghosts.flee(state, ghost), Direction.RIGHT)
 
 
+class ScatterTests(unittest.TestCase):
+    def test_cycle(self):
+        state = loop_state()
+        state.steps = ghosts.CHASE_STEPS - 1
+        self.assertFalse(ghosts.is_scattering(state))
+        state.steps = ghosts.CHASE_STEPS
+        self.assertTrue(ghosts.is_scattering(state))
+        state.steps = ghosts.CHASE_STEPS + ghosts.SCATTER_STEPS
+        self.assertFalse(ghosts.is_scattering(state))
+
+    def test_chaser_heads_home_while_scattering(self):
+        state = loop_state()
+        ghost = state.ghosts[1]                   # başlangıcı (3, 5)
+        # Yön yokken iki yol da serbesttir; seçimi yalnızca hedef belirler.
+        ghost.position, ghost.direction = (1, 4), None
+        state.pacman = (1, 1)
+        state.steps = ghosts.CHASE_STEPS          # çekilme: Pacman'den uzağa, eve
+        self.assertEqual(ghosts.chase(state, ghost), Direction.RIGHT)
+        state.steps = 0                           # kovalama: Pacman'e doğru
+        self.assertEqual(ghosts.chase(state, ghost), Direction.LEFT)
+
+
 class WanderTests(unittest.TestCase):
     def walk(self, seed, steps=40):
         state = GameState(parse_level("loop", LOOP), seed=seed, ghost_policy=ghosts.wander)
