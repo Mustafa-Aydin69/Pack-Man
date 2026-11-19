@@ -1,0 +1,79 @@
+import unittest
+
+from levels import Direction, LevelError, bfs_distances, parse_level
+
+SMALL = """
+#######
+#P.o.G#
+#.###.#
+#....G#
+#######
+"""
+
+
+class ParseLevelTests(unittest.TestCase):
+    def test_parses_positions(self):
+        level = parse_level("small", SMALL)
+        self.assertEqual((level.width, level.height), (7, 5))
+        self.assertEqual(level.pacman_start, (1, 1))
+        self.assertEqual(level.ghost_starts, ((1, 5), (3, 5)))
+        self.assertEqual(level.powers, {(1, 3)})
+        self.assertIn((1, 2), level.pellets)
+        self.assertNotIn(level.pacman_start, level.pellets)
+
+    def test_rejects_ragged_rows(self):
+        with self.assertRaises(LevelError):
+            parse_level("x", "#####\n#P.G#\n####\n")
+
+    def test_rejects_open_border(self):
+        with self.assertRaises(LevelError):
+            parse_level("x", "######\n.P.GG#\n######\n")
+
+    def test_requires_single_pacman(self):
+        with self.assertRaises(LevelError):
+            parse_level("x", "#######\n#PP.GG#\n#######\n")
+
+    def test_requires_two_ghosts(self):
+        with self.assertRaises(LevelError):
+            parse_level("x", "######\n#P..G#\n######\n")
+
+    def test_rejects_unreachable_pellet(self):
+        text = """
+#########
+#P..GG#.#
+#########
+"""
+        with self.assertRaises(LevelError) as ctx:
+            parse_level("x", text)
+        self.assertIn("(1, 7)", str(ctx.exception))
+
+    def test_rejects_unknown_character(self):
+        with self.assertRaises(LevelError):
+            parse_level("x", "#######\n#P.xGG#\n#######\n")
+
+
+class BfsTests(unittest.TestCase):
+    def test_distance_goes_around_walls(self):
+        level = parse_level("small", SMALL)
+        distances = bfs_distances(level, (1, 1))
+        # (3, 1) Manhattan'a göre 2 adım; aradaki kare açık olduğu için BFS de 2 bulur.
+        self.assertEqual(distances[(3, 1)], 2)
+        # (3, 5)'e üst ya da alt koridordan 6 adımda gidilir.
+        self.assertEqual(distances[(3, 5)], 6)
+        self.assertNotIn((2, 3), distances)       # duvar
+
+    def test_moves_from_respects_walls(self):
+        level = parse_level("small", SMALL)
+        moves = dict(level.moves_from((1, 1)))
+        self.assertEqual(set(moves), {Direction.RIGHT, Direction.DOWN})
+
+
+class DirectionTests(unittest.TestCase):
+    def test_opposites(self):
+        for direction in Direction:
+            self.assertEqual(direction.opposite.opposite, direction)
+            self.assertEqual(direction.opposite.apply(direction.apply((5, 5))), (5, 5))
+
+
+if __name__ == "__main__":
+    unittest.main()
