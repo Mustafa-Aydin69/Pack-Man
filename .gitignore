@@ -1,0 +1,36 @@
+# Ödev tanımı yerelde kalır, repoya gönderilmez
+Pacman_Proje_Kilavuzu.pdf
+
+# Python önbellekleri
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Sanal ortamlar
+.venv/
+venv/
+env/
+
+# PyInstaller derleme çıktıları
+build/
+dist/
+*.exe
+
+# Editör ve işletim sistemi dosyaları
+.vscode/
+.idea/
+.claude/
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Gizli bilgiler
+.env
+
+# Derleme ortamı ve PyInstaller dosyaları
+.venv-build/
+*.spec
+self_test_report.txt
+
+# LMS teslim paketi (derleme sonrası üretilir)
+Pacman.zip

@@ -1,0 +1,3 @@
+# Arayüz teması. Python 3.9, 3.12 ve 3.13 ile uyumludur (bağımlılığı Pillow).
+# Kurulu değilse program standart ttk temasıyla, aynı işlevlerle çalışır.
+ttkbootstrap==1.14.7
