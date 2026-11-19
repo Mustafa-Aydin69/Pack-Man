@@ -217,8 +217,6 @@ class BoardView:
         return start[0] + (end[0] - start[0]) * t, start[1] + (end[1] - start[1]) * t
 
     def _draw_pacman(self, state, center, moved):
-        cx, cy = center
-        r = self.cell * 0.42
         if state.status is Status.LOST:
             # Yakalanınca ağız tamamen açık, kapanmayan bir "pasta dilimi".
             mouth = 300
@@ -227,46 +225,15 @@ class BoardView:
             mouth = MOUTH_CLOSED + (MOUTH_OPEN - MOUTH_CLOSED) * abs(math.cos(math.pi * self._progress))
         else:
             mouth = (MOUTH_OPEN + MOUTH_CLOSED) / 2
-        facing = FACING_ANGLE[state.direction or Direction.RIGHT]
-        self.canvas.create_arc(cx - r, cy - r, cx + r, cy + r, start=facing + mouth / 2, extent=360 - mouth,
-                               fill=C["pacman"], outline="", style="pieslice", tags="dynamic")
+        draw_pacman(self.canvas, *center, self.cell * 0.42, state.direction or Direction.RIGHT, mouth,
+                    tags="dynamic")
 
     def _draw_ghost(self, ghost, index, state, frame, center):
-        canvas = self.canvas
-        cx, cy = center
-        r = self.cell * 0.42
-        if ghost.frightened:
-            flashing = state.power_left <= FLASH_STEPS and frame % 2 == 1
-            body = C["ghost_flash"] if flashing else C["ghost_frightened"]
-        else:
-            colors = C["ghosts"]
-            body = colors[index % len(colors)]
+        flashing = ghost.frightened and state.power_left <= FLASH_STEPS and frame % 2 == 1
         # Etek her karede iki kez kıpırdar.
         wave = frame * 2 + (1 if self._progress >= 0.5 else 0)
-        canvas.create_polygon(ghost_outline(cx, cy, r, wave), fill=body, outline="", tags="dynamic")
-
-        if ghost.frightened:
-            # Korkmuş yüz: küçük gözler ve titrek ağız.
-            face = C["ghost_pupil"] if body == C["ghost_flash"] else C["ghost_eye"]
-            for dx in (-0.3, 0.3):
-                ex, ey = cx + dx * r, cy - 0.2 * r
-                canvas.create_oval(ex - 0.1 * r, ey - 0.1 * r, ex + 0.1 * r, ey + 0.1 * r,
-                                   fill=face, outline="", tags="dynamic")
-            points = []
-            for i in range(7):
-                points += [cx - 0.5 * r + i * r / 6, cy + 0.3 * r + (0.1 * r if i % 2 else -0.1 * r)]
-            canvas.create_line(points, fill=face, width=max(1, self.cell // 16), tags="dynamic")
-            return
-
-        # Normal yüz: gözbebekleri hareket yönüne bakar.
-        d_row, d_col = (ghost.direction or Direction.DOWN).value
-        for dx in (-0.35, 0.35):
-            ex, ey = cx + dx * r, cy - 0.15 * r
-            canvas.create_oval(ex - 0.22 * r, ey - 0.26 * r, ex + 0.22 * r, ey + 0.26 * r,
-                               fill=C["ghost_eye"], outline="", tags="dynamic")
-            px, py = ex + d_col * 0.1 * r, ey + d_row * 0.12 * r
-            canvas.create_oval(px - 0.11 * r, py - 0.11 * r, px + 0.11 * r, py + 0.11 * r,
-                               fill=C["ghost_pupil"], outline="", tags="dynamic")
+        draw_ghost(self.canvas, *center, self.cell * 0.42, ghost_color(index), ghost.direction,
+                   frightened=ghost.frightened, flashing=flashing, wave=wave, tags="dynamic")
 
     # ------------------------------------------------------------------
     # Mesaj katmanı
@@ -280,17 +247,57 @@ class BoardView:
         x0, y0 = self.origin
         x1, y1 = x0 + self.cell * self.level.width, y0 + self.cell * self.level.height
         # Tk yarı saydam renk desteklemez; noktalı (stipple) bir örtü karartma etkisi verir.
-        canvas.create_rectangle(x0, y0, x1, y1, fill="#000000", stipple="gray50", outline="", tags="overlay")
+        canvas.create_rectangle(x0, y0, x1, y1, fill=theme.COLORS["bg"], stipple="gray75", outline="",
+                                tags="overlay")
         cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
-        size = max(14, self.cell)
-        canvas.create_text(cx, cy - (size * 0.5 if subtitle else 0), text=title, fill=C["overlay_text"],
-                           font=(theme.FONT_FAMILY, size, "bold"), tags="overlay")
+        # Başlık arcade yazı tipiyle; tek karakterlik geri sayım iri yazılır.
+        size = "hero" if len(title) <= 2 else "big"
+        canvas.create_text(cx, cy - (theme.px(18) if subtitle else 0), text=title, fill=C["overlay_text"],
+                           font=theme.display_font(size), tags="overlay")
         if subtitle:
-            canvas.create_text(cx, cy + size * 0.6, text=subtitle, fill=C["overlay_text"],
-                               font=(theme.FONT_FAMILY, max(10, size // 2)), tags="overlay")
+            canvas.create_text(cx, cy + theme.px(30), text=subtitle, fill=theme.COLORS["text"],
+                               font=theme.ui_font("lead"), tags="overlay")
 
     def _raise_overlay(self):
         self.canvas.tag_raise("overlay")
+
+
+def ghost_color(index):
+    colors = C["ghosts"]
+    return colors[index % len(colors)]
+
+
+def draw_pacman(canvas, cx, cy, r, direction=Direction.RIGHT, mouth=MOUTH_OPEN, color=None, tags=()):
+    """Pacman: ``direction`` yönüne bakan, ağzı ``mouth`` derece açık bir pasta dilimi."""
+    facing = FACING_ANGLE[direction]
+    return canvas.create_arc(cx - r, cy - r, cx + r, cy + r, start=facing + mouth / 2, extent=360 - mouth,
+                             fill=color or C["pacman"], outline="", style="pieslice", tags=tags)
+
+
+def draw_ghost(canvas, cx, cy, r, body, direction=None, frightened=False, flashing=False, wave=0, tags=()):
+    """Hayalet: gövde, gözler (gidiş yönüne bakar); korkmuşsa mavi gövde ve titrek ağız."""
+    if frightened:
+        body = C["ghost_flash"] if flashing else C["ghost_frightened"]
+    canvas.create_polygon(ghost_outline(cx, cy, r, wave), fill=body, outline="", tags=tags)
+    if frightened:
+        face = C["ghost_pupil"] if flashing else C["ghost_eye"]
+        for dx in (-0.3, 0.3):
+            ex, ey = cx + dx * r, cy - 0.2 * r
+            canvas.create_oval(ex - 0.1 * r, ey - 0.1 * r, ex + 0.1 * r, ey + 0.1 * r,
+                               fill=face, outline="", tags=tags)
+        points = []
+        for i in range(7):
+            points += [cx - 0.5 * r + i * r / 6, cy + 0.3 * r + (0.1 * r if i % 2 else -0.1 * r)]
+        canvas.create_line(points, fill=face, width=max(1, round(r / 7)), tags=tags)
+        return
+    d_row, d_col = (direction or Direction.DOWN).value
+    for dx in (-0.35, 0.35):
+        ex, ey = cx + dx * r, cy - 0.15 * r
+        canvas.create_oval(ex - 0.22 * r, ey - 0.26 * r, ex + 0.22 * r, ey + 0.26 * r,
+                           fill=C["ghost_eye"], outline="", tags=tags)
+        px, py = ex + d_col * 0.1 * r, ey + d_row * 0.12 * r
+        canvas.create_oval(px - 0.11 * r, py - 0.11 * r, px + 0.11 * r, py + 0.11 * r,
+                           fill=C["ghost_pupil"], outline="", tags=tags)
 
 
 def positions(state):
