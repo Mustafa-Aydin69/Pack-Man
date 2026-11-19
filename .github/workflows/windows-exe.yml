@@ -2,10 +2,16 @@ name: Windows EXE
 
 # Her main gönderiminde: testler, EXE derleme (build_exe.bat), EXE'nin kendi
 # self-test'i ve LMS teslim paketi. Paket "Pacman-teslim" adıyla indirilebilir.
+# "v" ile başlayan bir sürüm etiketi gönderilince paket ayrıca o sürümün
+# GitHub Release sayfasına eklenir.
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   workflow_dispatch:
+
+permissions:
+  contents: write      # yalnızca sürüm etiketinde Release oluşturmak için
 
 jobs:
   build:
@@ -41,3 +47,9 @@ jobs:
           path: |
             Pacman.zip
             self_test_report.txt
+
+      - name: Sürüm sayfası
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ github.ref_name }}" Pacman.zip --title "Pacman ${{ github.ref_name }}" --notes "LMS teslim paketi - README.txt, Pacman.exe ve Kaynak Kodlar. EXE bu sürümün kaynak kodundan GitHub Actions'ta Windows'ta derlendi ve self-test'ten geçti."
