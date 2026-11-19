@@ -16,7 +16,7 @@ import ghosts
 import theme
 from levels import Direction
 from timers import PausableTimer
-from views import BoardView
+from views import BoardView, positions
 
 KEY_DIRECTIONS = {
     "Up": Direction.UP, "Down": Direction.DOWN, "Left": Direction.LEFT, "Right": Direction.RIGHT,
@@ -25,6 +25,9 @@ KEY_DIRECTIONS = {
 COUNTDOWN_MS = 600          # geri sayımın her rakamı
 LEVEL_MESSAGE_MS = 1600     # "Seviye tamamlandı" mesajının süresi
 FINISH_MESSAGE_MS = 2200    # tur sonu mesajının süresi
+# Çizim aralığı (~60 kare/sn). Oyun mantığı Rules.step_ms'de bir ilerler;
+# aradaki karelerde karakterler kayarak çizilir.
+ANIMATION_MS = 16
 
 
 def format_time(ms):
@@ -48,6 +51,7 @@ class GameScreen:
         self.frame = 0                      # animasyon sayacı
         self.phase = "countdown"            # countdown | playing | paused | message | finished
         self._jobs = []                     # bekleyen root.after işleri (kapatılırken iptal edilir)
+        self._animation_job = None
         self.timer = PausableTimer(root, self._tick)
 
         self.page = ttk.Frame(root, style="Page.TFrame", padding=self._px(theme.SPACING["page"]))
@@ -63,6 +67,7 @@ class GameScreen:
         self.board.show(run.state, self.frame)
         self._refresh_hud()
         self._after(50, self._countdown, 3)
+        self._animate()
 
     # ------------------------------------------------------------------
     # Yerleşim
@@ -197,9 +202,10 @@ class GameScreen:
     def _tick(self):
         state = self.run.state
         direction = self.agent.choose(state) if self.is_ai else self.requested
+        before = positions(state)
         state.step(direction)
         self.frame += 1
-        self.board.show(state, self.frame)
+        self.board.show(state, self.frame, previous=before)
         self._refresh_hud()
         if self.is_ai:
             self._refresh_ai_panel(direction)
@@ -215,8 +221,20 @@ class GameScreen:
         else:
             self.timer.start(self.run.rules.step_ms)
 
+    def _animate(self):
+        """Saniyede ~60 kez: son adımı zamanlayıcının ilerlemesine göre kaydırarak çizer.
+
+        İlerleme, bir sonraki adıma kalan süreden hesaplanır. Duraklatınca
+        zamanlayıcının kalan süresi donduğu için görüntü de olduğu yerde durur.
+        """
+        self._animation_job = self.root.after(ANIMATION_MS, self._animate)
+        if self.phase == "playing" and self.timer.is_pending:
+            step_ms = self.run.rules.step_ms
+            self.board.animate(1.0 - self.timer.remaining_ms / step_ms)
+
     def _show_message(self, title, subtitle):
         self.phase = "message"
+        self.board.finish_motion()
         self.board.overlay(title, subtitle)
         self.pause_button.state(["disabled"])
 
@@ -332,6 +350,9 @@ class GameScreen:
     def destroy(self):
         """Zamanlayıcıları ve klavye bağlantısını kaldırıp ekranı kapatır."""
         self.timer.cancel()
+        if self._animation_job is not None:
+            self.root.after_cancel(self._animation_job)
+            self._animation_job = None
         for job in self._jobs:
             self.root.after_cancel(job)
         self._jobs.clear()
