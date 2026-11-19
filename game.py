@@ -71,6 +71,8 @@ class StepResult:
     """Bir adımda olanlar; arayüz bunları HUD ve bildirimler için kullanır."""
 
     moved: bool = False
+    ate_pellet: bool = False
+    ate_power: bool = False
 
 
 class GameState:
@@ -86,6 +88,7 @@ class GameState:
         self.ghosts = [Ghost(start, start) for start in level.ghost_starts]
         self.score = 0
         self.steps = 0
+        self.power_left = 0             # enerji etkisinin kalan adım sayısı
         self.status = Status.PLAYING
         # Hayaletlerin rastgele kararları bu üreteçten gelir. Seed aynı olduğu
         # sürece iki oyuncu aynı rastgele dizilerle karşılaşır.
@@ -101,6 +104,15 @@ class GameState:
     @property
     def is_over(self):
         return self.status is not Status.PLAYING
+
+    @property
+    def pellets_left(self):
+        """Ekranda gösterilen "kalan yemek". Enerji topları ayrıca sayılır."""
+        return len(self.pellets)
+
+    @property
+    def powered(self):
+        return self.power_left > 0
 
     def legal_directions(self):
         """Pacman'in bulunduğu kareden geçerli yönler (duvara doğru olanlar hariç)."""
@@ -121,6 +133,8 @@ class GameState:
         if self.is_over:
             return result
         self._move_pacman(requested, result)
+        self._eat(result)
+        self._tick_power(result)
         self.steps += 1
         return result
 
@@ -135,6 +149,31 @@ class GameState:
                 self.score += self.rules.move_cost
                 result.moved = True
                 return
+
+    def _eat(self, result):
+        if self.pacman in self.pellets:
+            self.pellets.remove(self.pacman)
+            self.score += self.rules.pellet
+            result.ate_pellet = True
+        elif self.pacman in self.powers:
+            self.powers.remove(self.pacman)
+            self.score += self.rules.power
+            # Etki devam ederken yeni top yenirse süre baştan başlar (eklenmez);
+            # böylece etki hiçbir zaman power_duration'dan uzun sürmez.
+            self.power_left = self.rules.power_duration
+            for ghost in self.ghosts:
+                ghost.frightened = True
+            result.ate_power = True
+
+    def _tick_power(self, result):
+        # Topun yendiği adım da etkinin ilk adımı sayılır; geri sayım bu yüzden
+        # o adımın sonunda başlar.
+        if self.power_left == 0:
+            return
+        self.power_left -= 1
+        if self.power_left == 0:
+            for ghost in self.ghosts:
+                ghost.frightened = False
 
     # ------------------------------------------------------------------
     # Kopyalama
